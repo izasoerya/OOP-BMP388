@@ -65,30 +65,6 @@ void loop() {
   // put your main code here, to run repeatedly:
 }
 
-void detect_state() {
-  if (packetCount==0) {
-    telemetry().state(0); //standby
-  }
-  if (altit>1) {
-    telemetry().state(1); //ascent
-  }
-  if ((last_altit>altit+1)&&(gForce<9.80665)&&(press<970)&&(altit>400)) {
-    telemetry().state(2); //command to separation
-  }
-  if (gForce>9.80665&&altit>500) {
-    telemetry().state(3); //descent
-  }
-  if (gForce>9.80665&&altit>500) {
-    telemetry().state(4); //hsrelease
-  }
-  if (gForce>9.80665&&altit<200) {
-    telemetry().state(5); //pprelease
-  }
-  if (packetCount>400&&altit<10) {
-    telemetry().state(6); //pprelease
-  }
-}
-
 void SENSOR_S (void *pvParameters) {
   (void) pvParameters;  //ga penting, dihapus juga boleh
   while (1) {
@@ -120,7 +96,7 @@ void SENSOR_S (void *pvParameters) {
   accelZ = mpud.readacc_z();
   gForce = mpud.readGforce();
   }
-  detect_state();
+  telemetry().detect_state(packetCount,gForce,press,altit,last_altit);
   last_altit = altit;
   vTaskDelay( 10 / portTICK_PERIOD_MS );  //baca sensor tiap 1 ms biar ga menuhin buffer, tapi nilai di detik 
   }                                      //1 sj yang dipakai biar up to date (*tanya aja nek bingung maksudnya)

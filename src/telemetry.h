@@ -83,6 +83,29 @@ class telemetry {
     private:
     public:
     telemetry(){};
+    void detect_state(float paket, float gforce, float press, float altitude, float before_alti) {
+    if (paket==0) {
+        telemetry().state(0); //standby
+     }
+    if (altitude>0.8) {
+        telemetry().state(1); //ascent
+    }
+    if ((before_alti>altitude+1)&&(gforce<9.80665)&&(press<970)&&(altitude>400)) {
+        telemetry().state(2); //command to separation
+    }
+    if (gforce>9.80665&&altitude>500) {
+        telemetry().state(3); //descent
+    }
+    if (gforce>9.80665&&altitude>500) {
+        telemetry().state(4); //hsrelease
+    }
+    if (gforce>9.80665&&altitude<200) {
+        telemetry().state(5); //pprelease
+    }
+    if (paket>400&&altitude<10) {
+        telemetry().state(6); //landing
+    }
+    }
     void state(int condition) {
         State = condition;
     }
