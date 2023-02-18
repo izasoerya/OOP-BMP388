@@ -48,8 +48,8 @@ void setup() {
     altit = bmed.read_altitude(1023.5);
   }
   ref = bmp.pressure/100.0;
-  telemetry().state(2);
- // EEPROM.put(0, 255);
+  // telemetry().state(2);
+  // EEPROM.put(0, 255);
   pinMode(5, OUTPUT);     //hanya tes program run atau tidak
   pinMode(13, OUTPUT);
   digitalWrite(13,HIGH);
@@ -66,8 +66,26 @@ void loop() {
 }
 
 void detect_state() {
-  if ((last_altit>altit+1)&&(gForce>9.80665)&&(press<970)&&(altit>400)) {
+  if (packetCount==0) {
+    telemetry().state(0); //standby
+  }
+  if (altit>1) {
+    telemetry().state(1); //ascent
+  }
+  if ((last_altit>altit+1)&&(gForce<9.80665)&&(press<970)&&(altit>400)) {
     telemetry().state(2); //command to separation
+  }
+  if (gForce>9.80665&&altit>500) {
+    telemetry().state(3); //descent
+  }
+  if (gForce>9.80665&&altit>500) {
+    telemetry().state(4); //hsrelease
+  }
+  if (gForce>9.80665&&altit<200) {
+    telemetry().state(5); //pprelease
+  }
+  if (packetCount>400&&altit<10) {
+    telemetry().state(6); //pprelease
   }
 }
 
