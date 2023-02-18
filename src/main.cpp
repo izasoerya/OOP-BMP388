@@ -51,8 +51,6 @@ void setup() {
   // telemetry().state(2);
   // EEPROM.put(0, 255);
   pinMode(5, OUTPUT);     //hanya tes program run atau tidak
-  pinMode(13, OUTPUT);
-  digitalWrite(13,HIGH);
   xTaskCreate(SENSOR_S, "Task2", 512, NULL, 5, &TaskSENSOR_Handler);    //func bme,mpu
   xTaskCreate(PRINTER_S, "Task3", 1024, NULL, 3, &TaskPRINTER_Handler);  //func serial print
   xTaskCreate(GPS_S, "Task4", 512, NULL, 4, &TaskGPS_Handler);          //func gps
@@ -73,17 +71,19 @@ void SENSOR_S (void *pvParameters) {
   }else {  // kalo nyambung baca datanya
   temp = bmed.read_temp();
   press = bmed.read_press();
-  if (tele_calibration==true) {bmed.tele_calibration();tele_calibration=false;}
+  if (tele_calibration==true) {
+    ref = bmed.read_press();
+    bmed.tele_calibration(ref);tele_calibration=false;}
   if (tele_sim==true) {
     if (altit>0) {
     altit = bmed.read_altitude_sim(sim_press);
     }
-    else {altit=-2;}
+    else {altit=-0;}
   }
   else {
-    if(bmed.read_altitude(ref)>=0) {  if(bmed.read_altitude(ref)>=600) {digitalWrite(5,HIGH);}
+//    if(bmed.read_altitude(ref)>=0) {  if(bmed.read_altitude(ref)>=600) {digitalWrite(5,HIGH);}
     altit = bmed.read_altitude(ref);
-    } else {altit = 0;}
+ //   } else {altit = 0;}
   }
   }
   Wire1.beginTransmission(0x68);  //buat baca mpu nyambung atau tidak pakai address mpu 0x68
@@ -205,6 +205,7 @@ void PRINTER_S (void *pvParameters) {  //serial print buat semua sensor dkk (tel
   else {
   Serial.println(tele);
   packetCount++;
+  Serial.println(ref);
   }
   vTaskDelay( 1000 / portTICK_PERIOD_MS );
   }

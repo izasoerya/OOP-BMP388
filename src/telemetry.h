@@ -21,7 +21,8 @@ enum State {
     char PC_DEPLOYED = 'N';
     char MAST_RAISED = 'N';
     byte State;
-    String cmdEcho = "kntl";
+    String cmdEcho = "INVALID";
+    bool state_1,state_2,state_3,state_4,state_5,state_6,state_7;
     
     /* Pressure sensor */
     float altitude=altit; char str_altitude[10]; //dtostrf(altitude, 1, 1, str_altitude);
@@ -84,25 +85,25 @@ class telemetry {
     public:
     telemetry(){};
     void detect_state(float paket, float gforce, float press, float altitude, float before_alti) {
-    if (paket==0) {
+    if (paket==0) { state_1 = true;
         telemetry().state(0); //standby
      }
-    if (altitude>0.8) {
+    if (altitude>1&&state_3!=true) { state_2 = true;
         telemetry().state(1); //ascent
     }
-    if ((before_alti>altitude+1)&&(gforce<9.80665)&&(press<970)&&(altitude>400)) {
+    if ((before_alti>altitude+1)&&(altitude>500)&&(altitude>400)) { state_3 = true;
         telemetry().state(2); //command to separation
     }
-    if (gforce>9.80665&&altitude>500) {
+    if (altitude>400&&state_3==true) { state_4 = true;
         telemetry().state(3); //descent
     }
-    if (gforce>9.80665&&altitude>500) {
+    if (altitude<500&&altitude>200&&state_4==true) { state_5 = true;
         telemetry().state(4); //hsrelease
     }
-    if (gforce>9.80665&&altitude<200) {
+    if (altitude<200&&altitude>100&&state_6==true) { state_6 = true;
         telemetry().state(5); //pprelease
     }
-    if (paket>400&&altitude<10) {
+    if (paket>400&&altitude<10) { state_7 = true;
         telemetry().state(6); //landing
     }
     }
@@ -126,7 +127,7 @@ class telemetry {
     tele_enable = false,tele_sim=false,tele_activate=false;Serial.println("SIM DONE!");cmdEcho = "SIMDISABLE";
     }
     if (String(head+label+mode)=="CMD1084SIMP"&&tele_enable==true&&tele_activate==true){ //kalo di string ada kode maka do something
-    tele_sim = true;sim_press = content.toFloat();Serial.println("PRESS DONE!");
+    tele_sim = true;sim_press = content.toFloat();Serial.println("PRESS DONE!");cmdEcho = content;
     }
     }
     void distort (float a,float t,float p,float x,float y,float v, int j, int m, int d, float lat, float lng, float gps_alti, int satelite) {

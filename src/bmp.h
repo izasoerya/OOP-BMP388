@@ -45,12 +45,13 @@ class bmp_read {
     float read_altitude_sim(float pc_press) {
       return bmp.readAltitude(pc_press);
     };
-    void tele_calibration() {
+    void tele_calibration(float ref) {
       bmp.begin_I2C();  
       bmp.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
       bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
       bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
       bmp.setOutputDataRate(BMP3_ODR_50_HZ);
+      
     };
     void flush_eeprom() {
       for (int i = 0; i < 256; i++) {
