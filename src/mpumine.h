@@ -16,9 +16,13 @@ class Mpumine {
     float readacc_x(); 
     float readacc_y();
     float readacc_z();
+    float readgyro_x();
+    float readgyro_y();
+    float readgyro_z();
     float readGforce();
     int error_cek();
-
+    float read_roll();
+    float read_pitch();
 };
 
 #endif

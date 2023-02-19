@@ -29,7 +29,7 @@ void EPROM_SD(void *pvParameters );
 void SIMULATOR(void *pvParameters );
 
 extern unsigned long packetCount; extern bool tele_command, tele_calibration, tele_enable, tele_sim;extern float sim_press;
-float accelX,accelY,gForce,l_gforce,accelZ,c,temp=0,press,altit,last_altit=0,ref,lat,lng,eprom,voltase=5.0,gps_altitude;    //MPU, BME, GPS, EEPROM
+float accelX,accelY,gForce,l_gforce,accelZ,value_roll,value_pitch,c,temp=0,press,altit,last_altit=0,ref,lat,lng,eprom,voltase=5.0,gps_altitude;    //MPU, BME, GPS, EEPROM
 int packet[3] = {0,0,0},time[7],gps_satelite,paket_xbee=0,error; bool var_sim;    //GPS
 int no=0,i; int n ; String ayaya[100]; int k=0,state; String hasil, tele; char tampung; bool lock=false;    //PARSING
 
@@ -92,6 +92,8 @@ void SENSOR_S (void *pvParameters) {
   accelX = mpud.readacc_x();
   accelY = mpud.readacc_y();
   accelZ = mpud.readacc_z();
+  value_roll = mpud.read_roll();
+  value_pitch = mpud.read_pitch();
   gForce = (mpud.readGforce()+l_gforce)/2;
   }
   telemetry().detect_mode(tele_sim);
@@ -178,18 +180,18 @@ void SIMULATOR(void *pvParameters) {
     lock=true;
   }
   if(lock==true) {parsing();}  
-  vTaskDelay(100 / portTICK_PERIOD_MS );
+  vTaskDelay(300 / portTICK_PERIOD_MS );
   }
 }
 
 void EPROM_SD (void *pvParameters) {   //*buat EEPROM butuh cara untuk avoid overwrite eeprom
   (void) pvParameters;
   SD.begin(CS); //init SD card sesuai pin CS
-  myFile = SD.open("Flight_1088.csv", FILE_WRITE);
+  myFile = SD.open("1088.csv", FILE_WRITE);
   myFile.println("TeamID,Date,Count,Mode,State,Altitude,HS,PC,MAST,Temperature,Pressure,Voltage,DateGPS,AltiGPS,LAT,LNG,Satelite,TILTX,TILTY,ECHO");
   myFile.close();
   while(1) {
-  myFile = SD.open("Flight_1088.csv", FILE_WRITE);  //open notepad buat isi data
+  myFile = SD.open("1088.csv", FILE_WRITE);  //open notepad buat isi data
   if (myFile) {
     myFile.print(tele);
     myFile.close();   //close notepad

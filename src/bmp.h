@@ -57,7 +57,6 @@ class bmp_read {
       for (int i = 0; i < 256; i++) {
         EEPROM.write(i, 255);
       }
-      Serial.begin(9600);
       Serial.print("Done flush, please comment the function");
     };
 };
