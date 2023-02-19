@@ -16,7 +16,7 @@ enum State {
     INVALID     = -1
 };
 
-    char mode = 'F';
+    String mode;
     char HS_DEPLOYED = 'N';
     char PC_DEPLOYED = 'N';
     char MAST_RAISED = 'N';
@@ -91,43 +91,50 @@ class telemetry {
     if (altitude>1&&state_3!=true) { state_2 = true;
         telemetry().state(1); //ascent
     }
-    if ((before_alti>altitude+1)&&(altitude>500)&&(altitude>400)) { state_3 = true;
+    if ((before_alti>altitude+1)&&(altitude<600)&&(altitude>500)) { state_3 = true;
         telemetry().state(2); //command to separation
     }
-    if (altitude>400&&state_3==true) { state_4 = true;
+    if (altitude>400&&state_3==true&&altitude<500) { state_4 = true;
         telemetry().state(3); //descent
     }
     if (altitude<500&&altitude>200&&state_4==true) { state_5 = true;
         telemetry().state(4); //hsrelease
     }
-    if (altitude<200&&altitude>100&&state_6==true) { state_6 = true;
+    if (altitude<200&&altitude>100&&state_5==true) { state_6 = true;
         telemetry().state(5); //pprelease
     }
     if (paket>400&&altitude<10) { state_7 = true;
         telemetry().state(6); //landing
     }
     }
+    void detect_mode (bool modeparam) {
+        if (modeparam==true) {
+            mode = "S";
+        }
+        else {
+            mode = "F";
+        }
+    }
     void state(int condition) {
         State = condition;
     }
     void tele_readcomm(String head, String label, String mode, String content) {
-    Serial.begin(9600);
     if (String(head+label+mode+content)=="CMD1084CXON"){ //kalo di string ada kode maka do something
-    tele_command = true;Serial.println("ON DONE!");cmdEcho = "CXON";}
+    tele_command = true;;cmdEcho = "CXON";}
     if (String(head+label+mode+content)=="CMD1084CXCAL"){ //kalo di string ada kode maka do something
-    tele_calibration = true;Serial.println("CALI ON!");cmdEcho = "CAL";
+    tele_calibration = true;;cmdEcho = "CAL";
     }
-    if (String(head+label+mode+content)=="CMD1084SIMACTUVATE"){ //kalo di string ada kode maka do something
-    tele_activate = true;Serial.println("ACTIVATE DONE!");cmdEcho = "SIMACTIVATE";
+    if (String(head+label+mode+content)=="CMD1084SIMACTIVATE"){ //kalo di string ada kode maka do something
+    tele_activate = true;;cmdEcho = "SIMACTIVATE";
     }
     if (String(head+label+mode+content)=="CMD1084SIMENABLE"){ //kalo di string ada kode maka do something
-    tele_enable = true;Serial.println("ENABLE DONE!");cmdEcho = "SIMENABLE";
+    tele_enable = true;;cmdEcho = "SIMENABLE";
     }
     if (String(head+label+mode+content)=="CMD1084SIMDISABLE"){ //kalo di string ada kode maka do something
-    tele_enable = false,tele_sim=false,tele_activate=false;Serial.println("SIM DONE!");cmdEcho = "SIMDISABLE";
+    tele_enable = false,tele_sim=false,tele_activate=false;;cmdEcho = "SIMDISABLE";
     }
     if (String(head+label+mode)=="CMD1084SIMP"&&tele_enable==true&&tele_activate==true){ //kalo di string ada kode maka do something
-    tele_sim = true;sim_press = content.toFloat();Serial.println("PRESS DONE!");cmdEcho = content;
+    tele_sim = true;sim_press = content.toFloat();;cmdEcho = content;
     }
     }
     void distort (float a,float t,float p,float x,float y,float v, int j, int m, int d, float lat, float lng, float gps_alti, int satelite) {
@@ -157,7 +164,7 @@ class telemetry {
               "%s,"
               "%02d:%02d:%02d,"
               "%ld,"
-              "%c,%s,%s,"
+              "%s,%s,%s,"
               "%c,%c,%c,"
               "%s,%s,%s,"
               "%02d:%02d:%02d,"
@@ -166,9 +173,9 @@ class telemetry {
               teamID,
               hhGPS, mmGPS, ssGPS,
               packetCount,
-              mode, getState(), str_altitude,
+              mode.c_str(), getState(), str_altitude,
               HS_DEPLOYED, PC_DEPLOYED, MAST_RAISED,
-              str_temperature, str_pressure, str_voltage,
+              str_temperature, str_voltage, str_pressure,
               hhGPS, mmGPS, ssGPS,
               str_altigps, str_lat, str_lng,
               satsGPS, str_x, str_y, cmdEcho.c_str()

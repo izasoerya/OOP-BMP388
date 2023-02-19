@@ -29,10 +29,9 @@ void EPROM_SD(void *pvParameters );
 void SIMULATOR(void *pvParameters );
 
 extern unsigned long packetCount; extern bool tele_command, tele_calibration, tele_enable, tele_sim;extern float sim_press;
-float accelX,accelY,gForce,accelZ,c,temp=0,press,altit,last_altit=0,ref,lat,lng,eprom,voltase=5.0,gps_altitude;    //MPU, BME, GPS, EEPROM
+float accelX,accelY,gForce,l_gforce,accelZ,c,temp=0,press,altit,last_altit=0,ref,lat,lng,eprom,voltase=5.0,gps_altitude;    //MPU, BME, GPS, EEPROM
 int packet[3] = {0,0,0},time[7],gps_satelite,paket_xbee=0,error; bool var_sim;    //GPS
 int no=0,i; int n ; String ayaya[100]; int k=0,state; String hasil, tele; char tampung; bool lock=false;    //PARSING
-
 
 void setup() {
   Serial.begin(9600);
@@ -48,8 +47,6 @@ void setup() {
     altit = bmed.read_altitude(1023.5);
   }
   ref = bmp.pressure/100.0;
-  // telemetry().state(2);
-  // EEPROM.put(0, 255);
   pinMode(5, OUTPUT);     //hanya tes program run atau tidak
   xTaskCreate(SENSOR_S, "Task2", 512, NULL, 5, &TaskSENSOR_Handler);    //func bme,mpu
   xTaskCreate(PRINTER_S, "Task3", 1024, NULL, 3, &TaskPRINTER_Handler);  //func serial print
@@ -65,6 +62,7 @@ void loop() {
 
 void SENSOR_S (void *pvParameters) {
   (void) pvParameters;  //ga penting, dihapus juga boleh
+  l_gforce = mpud.readGforce();
   while (1) {
   if (isnan(bmed.read_altitude(ref))) {      //detect bme nyambung atau ga
   bmed.begin();vTaskDelay( 1 / portTICK_PERIOD_MS );  //kalo ga nyambung coba .begin biar jalan lagi
@@ -73,12 +71,13 @@ void SENSOR_S (void *pvParameters) {
   press = bmed.read_press();
   if (tele_calibration==true) {
     ref = bmed.read_press();
-    bmed.tele_calibration(ref);tele_calibration=false;}
+    bmed.tele_calibration(ref);tele_calibration=false;
+  }
   if (tele_sim==true) {
-    if (altit>0) {
+ //   if (altit>0) {
     altit = bmed.read_altitude_sim(sim_press);
-    }
-    else {altit=-0;}
+//    }
+ //   else {altit=-0;}
   }
   else {
 //    if(bmed.read_altitude(ref)>=0) {  if(bmed.read_altitude(ref)>=600) {digitalWrite(5,HIGH);}
@@ -86,18 +85,19 @@ void SENSOR_S (void *pvParameters) {
  //   } else {altit = 0;}
   }
   }
-  Wire1.beginTransmission(0x68);  //buat baca mpu nyambung atau tidak pakai address mpu 0x68
-  error = Wire1.endTransmission();  //kalo nyambung nilai error == 0
+  error = mpud.error_cek();
   if (error!=0||(mpud.readacc_x()&&mpud.readacc_y()&&mpud.readacc_z())==0) { //kalau tidak nyambung nilai error !=0 sama nilai xyz == 0
-    mpud.begin();vTaskDelay( 1 / portTICK_PERIOD_MS ) ;//coba .begin biar jalan lagi
+    mpud.begin();vTaskDelay( 10 / portTICK_PERIOD_MS ) ;//coba .begin biar jalan lagi
   }else { //kalau jalan baca data
   accelX = mpud.readacc_x();
   accelY = mpud.readacc_y();
   accelZ = mpud.readacc_z();
-  gForce = mpud.readGforce();
+  gForce = (mpud.readGforce()+l_gforce)/2;
   }
+  telemetry().detect_mode(tele_sim);
   telemetry().detect_state(packetCount,gForce,press,altit,last_altit);
   last_altit = altit;
+  l_gforce = gForce;
   vTaskDelay( 10 / portTICK_PERIOD_MS );  //baca sensor tiap 1 ms biar ga menuhin buffer, tapi nilai di detik 
   }                                      //1 sj yang dipakai biar up to date (*tanya aja nek bingung maksudnya)
 }
@@ -185,11 +185,11 @@ void SIMULATOR(void *pvParameters) {
 void EPROM_SD (void *pvParameters) {   //*buat EEPROM butuh cara untuk avoid overwrite eeprom
   (void) pvParameters;
   SD.begin(CS); //init SD card sesuai pin CS
-  myFile = SD.open("1088.csv", FILE_WRITE);
+  myFile = SD.open("Flight_1088.csv", FILE_WRITE);
   myFile.println("TeamID,Date,Count,Mode,State,Altitude,HS,PC,MAST,Temperature,Pressure,Voltage,DateGPS,AltiGPS,LAT,LNG,Satelite,TILTX,TILTY,ECHO");
   myFile.close();
   while(1) {
-  myFile = SD.open("1088.csv", FILE_WRITE);  //open notepad buat isi data
+  myFile = SD.open("Flight_1088.csv", FILE_WRITE);  //open notepad buat isi data
   if (myFile) {
     myFile.print(tele);
     myFile.close();   //close notepad
@@ -205,7 +205,7 @@ void PRINTER_S (void *pvParameters) {  //serial print buat semua sensor dkk (tel
   else {
   Serial.println(tele);
   packetCount++;
-  Serial.println(ref);
+  Serial.println(gForce);
   }
   vTaskDelay( 1000 / portTICK_PERIOD_MS );
   }

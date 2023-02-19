@@ -17,6 +17,7 @@ class Mpumine {
     float readacc_y();
     float readacc_z();
     float readGforce();
+    int error_cek();
 
 };
 

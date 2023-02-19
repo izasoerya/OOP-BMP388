@@ -5,7 +5,7 @@
 #include <Wire.h>
 
 Mpumine::Mpumine():mpu(Adafruit_MPU6050()){}
-
+int eror;
 void Mpumine::begin() {
   mpu.begin();
   mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
@@ -36,4 +36,9 @@ float Mpumine::readGforce() {
                 accel.acceleration.y * accel.acceleration.y +
                 accel.acceleration.z * accel.acceleration.z) / 9.80665;
   return gForce;
+}
+
+int Mpumine::error_cek() {
+  Wire1.beginTransmission(0x68);  //buat baca mpu nyambung atau tidak pakai address mpu 0x68
+  return Wire1.endTransmission();
 }
