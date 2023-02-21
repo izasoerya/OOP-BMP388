@@ -12,7 +12,7 @@
 #define CS 10
 #define xbee Serial2
 
-Mpumine mpud;
+Mpumine mpu(Wire1);
 bmp_read bmed;
 TinyGPSPlus gps;
 File myFile;
@@ -38,19 +38,19 @@ void setup() {
   while(!Serial){;}     //make sure program start after serial is open
   Serial3.begin(9600);
   Serial2.begin(9600);
-  mpud.begin();   
+  mpu.begin();   
   bmed.begin();
   temp = bmp.temperature;
-  while (temp<27) {
+  while (temp<25) {
     temp = bmed.read_temp();
     press = bmed.read_press();
     altit = bmed.read_altitude(1023.5);
   }
   ref = bmp.pressure/100.0;
   pinMode(5, OUTPUT);     //hanya tes program run atau tidak
-  xTaskCreate(SENSOR_S, "Task2", 512, NULL, 5, &TaskSENSOR_Handler);    //func bme,mpu
-  xTaskCreate(PRINTER_S, "Task3", 1024, NULL, 3, &TaskPRINTER_Handler);  //func serial print
-  xTaskCreate(GPS_S, "Task4", 512, NULL, 4, &TaskGPS_Handler);          //func gps
+  xTaskCreate(SENSOR_S, "Task2", 512, NULL, 4, &TaskSENSOR_Handler);    //func bme,mpu
+  xTaskCreate(PRINTER_S, "Task3", 1024, NULL, 5, &TaskPRINTER_Handler);  //func serial print
+  xTaskCreate(GPS_S, "Task4", 512, NULL, 3, &TaskGPS_Handler);          //func gps
   xTaskCreate(EPROM_SD, "Task5", 512, NULL, 2, &TaskEPROM_Handler);      //func EEPROM
   xTaskCreate(SIMULATOR, "Task6", 512, NULL, 1, &TaskSIM_Handler);      //func EEPROM
   vTaskStartScheduler();
@@ -62,7 +62,7 @@ void loop() {
 
 void SENSOR_S (void *pvParameters) {
   (void) pvParameters;  //ga penting, dihapus juga boleh
-  l_gforce = mpud.readGforce();
+  l_gforce = mpu.readGforce();
   while (1) {
   if (isnan(bmed.read_altitude(ref))) {      //detect bme nyambung atau ga
   bmed.begin();vTaskDelay( 1 / portTICK_PERIOD_MS );  //kalo ga nyambung coba .begin biar jalan lagi
@@ -85,16 +85,16 @@ void SENSOR_S (void *pvParameters) {
  //   } else {altit = 0;}
   }
   }
-  error = mpud.error_cek();
-  if (error!=0||(mpud.readacc_x()&&mpud.readacc_y()&&mpud.readacc_z())==0) { //kalau tidak nyambung nilai error !=0 sama nilai xyz == 0
-    mpud.begin();vTaskDelay( 10 / portTICK_PERIOD_MS ) ;//coba .begin biar jalan lagi
+//  error = mpu.error_cek();
+  if (error!=0||(mpu.readacc_x()&&mpu.readacc_y()&&mpu.readacc_z())==0) { //kalau tidak nyambung nilai error !=0 sama nilai xyz == 0
+    mpu.begin();vTaskDelay( 10 / portTICK_PERIOD_MS ) ;//coba .begin biar jalan lagi
   }else { //kalau jalan baca data
-  accelX = mpud.readacc_x();
-  accelY = mpud.readacc_y();
-  accelZ = mpud.readacc_z();
-  value_roll = mpud.read_roll();
-  value_pitch = mpud.read_pitch();
-  gForce = (mpud.readGforce()+l_gforce)/2;
+  accelX = mpu.readacc_x();
+  accelY = mpu.readacc_y();
+  accelZ = mpu.readacc_z();
+  value_roll = mpu.read_tiltx();
+  value_pitch = mpu.read_tilty();
+  gForce = (mpu.readGforce()+l_gforce)/2;
   }
   telemetry().detect_mode(tele_sim);
   telemetry().detect_state(packetCount,gForce,press,altit,last_altit);
@@ -169,7 +169,7 @@ void SIMULATOR(void *pvParameters) {
   (void) pvParameters;
   while (1) {
   /* Telemetry Format */
-  telemetry().distort(altit,temp,press,accelX,accelY,voltase,time[3],time[4],time[5],lat,lng,gps_altitude,gps_satelite);
+  telemetry().distort(altit,temp,press,tiltX,tiltY,voltase,time[3],time[4],time[5],lat,lng,gps_altitude,gps_satelite);
   tele = telemetry().constructMessage();
   tele.replace(" ", "");
   /* Parsing Command */
@@ -207,7 +207,7 @@ void PRINTER_S (void *pvParameters) {  //serial print buat semua sensor dkk (tel
   else {
   Serial.println(tele);
   packetCount++;
-  Serial.println(gForce);
+//  Serial.println(gForce);
   }
   vTaskDelay( 1000 / portTICK_PERIOD_MS );
   }
