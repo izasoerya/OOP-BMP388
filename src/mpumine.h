@@ -29,6 +29,7 @@ class Mpumine {
     float read_pitch();
     float read_tiltx();
     float read_tilty();
+    void update_sens();
 };
 
 #endif

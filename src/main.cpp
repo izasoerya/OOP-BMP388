@@ -31,7 +31,7 @@ void SIMULATOR(void *pvParameters );
 extern unsigned long packetCount; extern bool tele_command, tele_calibration, tele_enable, tele_sim;extern float sim_press;
 float accelX,accelY,gForce,l_gforce,accelZ,value_roll,value_pitch,c,temp=0,press,altit,last_altit=0,ref,lat,lng,eprom,voltase=5.0,gps_altitude;    //MPU, BME, GPS, EEPROM
 int packet[3] = {0,0,0},time[7],gps_satelite,paket_xbee=0,error; bool var_sim;    //GPS
-int no=0,i; int n ; String ayaya[100]; int k=0,state; String hasil, tele; char tampung; bool lock=false;    //PARSING
+int no=0,i,sensor_counter=0; int n ; String ayaya[100]; int k=0,state; String hasil, tele; char tampung; bool lock=false;    //PARSING
 
 void setup() {
   Serial.begin(9600);
@@ -62,8 +62,10 @@ void loop() {
 
 void SENSOR_S (void *pvParameters) {
   (void) pvParameters;  //ga penting, dihapus juga boleh
+  mpu.update_sens();
   l_gforce = mpu.readGforce();
   while (1) {
+  mpu.update_sens();
   if (isnan(bmed.read_altitude(ref))) {      //detect bme nyambung atau ga
   bmed.begin();vTaskDelay( 1 / portTICK_PERIOD_MS );  //kalo ga nyambung coba .begin biar jalan lagi
   }else {  // kalo nyambung baca datanya
@@ -99,7 +101,7 @@ void SENSOR_S (void *pvParameters) {
   telemetry().detect_mode(tele_sim);
   telemetry().detect_state(packetCount,gForce,press,altit,last_altit);
   last_altit = altit;
-  l_gforce = gForce;
+  l_gforce = gForce;sensor_counter++;
   vTaskDelay( 10 / portTICK_PERIOD_MS );  //baca sensor tiap 1 ms biar ga menuhin buffer, tapi nilai di detik 
   }                                      //1 sj yang dipakai biar up to date (*tanya aja nek bingung maksudnya)
 }
@@ -169,7 +171,7 @@ void SIMULATOR(void *pvParameters) {
   (void) pvParameters;
   while (1) {
   /* Telemetry Format */
-  telemetry().distort(altit,temp,press,tiltX,tiltY,voltase,time[3],time[4],time[5],lat,lng,gps_altitude,gps_satelite);
+  telemetry().distort(altit,temp,press,value_pitch,value_roll,voltase,time[3],time[4],time[5],lat,lng,gps_altitude,gps_satelite);
   tele = telemetry().constructMessage();
   tele.replace(" ", "");
   /* Parsing Command */
