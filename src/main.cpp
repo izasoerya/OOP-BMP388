@@ -182,7 +182,7 @@ void SIMULATOR(void *pvParameters) {
     lock=true;
   }
   if(lock==true) {parsing();}  
-  vTaskDelay(300 / portTICK_PERIOD_MS );
+  vTaskDelay(200 / portTICK_PERIOD_MS );
   }
 }
 
