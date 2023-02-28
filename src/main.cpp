@@ -19,12 +19,10 @@ File myFile;
 
 TaskHandle_t TaskSENSOR_Handler;
 TaskHandle_t TaskPRINTER_Handler;
-TaskHandle_t TaskGPS_Handler;
 TaskHandle_t TaskEPROM_Handler;
 TaskHandle_t TaskSIM_Handler;
 void SENSOR_S(void *pvParameters );
 void PRINTER_S(void *pvParameters );
-void GPS_S(void *pvParameters );
 void EPROM_SD(void *pvParameters );
 void SIMULATOR(void *pvParameters );
 
@@ -48,9 +46,8 @@ void setup() {
   }
   ref = bmp.pressure/100.0;
   pinMode(5, OUTPUT);     //hanya tes program run atau tidak
-  xTaskCreate(SENSOR_S, "Task2", 512, NULL, 4, &TaskSENSOR_Handler);    //func bme,mpu
-  xTaskCreate(PRINTER_S, "Task3", 1024, NULL, 5, &TaskPRINTER_Handler);  //func serial print
-  xTaskCreate(GPS_S, "Task4", 512, NULL, 3, &TaskGPS_Handler);          //func gps
+  xTaskCreate(SENSOR_S, "Task2", 512, NULL, 3, &TaskSENSOR_Handler);    //func bme,mpu
+  xTaskCreate(PRINTER_S, "Task3", 1024, NULL, 4, &TaskPRINTER_Handler);  //func serial print        
   xTaskCreate(EPROM_SD, "Task5", 512, NULL, 2, &TaskEPROM_Handler);      //func EEPROM
   xTaskCreate(SIMULATOR, "Task6", 512, NULL, 1, &TaskSIM_Handler);      //func EEPROM
   vTaskStartScheduler();
@@ -58,52 +55,6 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-}
-
-void SENSOR_S (void *pvParameters) {
-  (void) pvParameters;  //ga penting, dihapus juga boleh
-  mpu.update_sens();
-  l_gforce = mpu.readGforce();
-  while (1) {
-  mpu.update_sens();
-  if (isnan(bmed.read_altitude(ref))) {      //detect bme nyambung atau ga
-  bmed.begin();vTaskDelay( 1 / portTICK_PERIOD_MS );  //kalo ga nyambung coba .begin biar jalan lagi
-  }else {  // kalo nyambung baca datanya
-  temp = bmed.read_temp();
-  press = bmed.read_press();
-  if (tele_calibration==true) {
-    ref = bmed.read_press();
-    bmed.tele_calibration(ref);tele_calibration=false;
-  }
-  if (tele_sim==true) {
- //   if (altit>0) {
-    altit = bmed.read_altitude_sim(sim_press);
-//    }
- //   else {altit=-0;}
-  }
-  else {
-//    if(bmed.read_altitude(ref)>=0) {  if(bmed.read_altitude(ref)>=600) {digitalWrite(5,HIGH);}
-    altit = bmed.read_altitude(ref);
- //   } else {altit = 0;}
-  }
-  }
-//  error = mpu.error_cek();
-  if (error!=0||(mpu.readacc_x()&&mpu.readacc_y()&&mpu.readacc_z())==0) { //kalau tidak nyambung nilai error !=0 sama nilai xyz == 0
-    mpu.begin();vTaskDelay( 10 / portTICK_PERIOD_MS ) ;//coba .begin biar jalan lagi
-  }else { //kalau jalan baca data
-  accelX = mpu.readacc_x();
-  accelY = mpu.readacc_y();
-  accelZ = mpu.readacc_z();
-  value_roll = mpu.read_tiltx();
-  value_pitch = mpu.read_tilty();
-  gForce = (mpu.readGforce()+l_gforce)/2;
-  }
-  telemetry().detect_mode(tele_sim);
-  telemetry().detect_state(packetCount,gForce,press,altit,last_altit);
-  last_altit = altit;
-  l_gforce = gForce;sensor_counter++;
-  vTaskDelay( 10 / portTICK_PERIOD_MS );  //baca sensor tiap 1 ms biar ga menuhin buffer, tapi nilai di detik 
-  }                                      //1 sj yang dipakai biar up to date (*tanya aja nek bingung maksudnya)
 }
 
 void displayInfo() {
@@ -130,17 +81,72 @@ void displayInfo() {
   }
 }
 
-void GPS_S (void *pvParameters) {
-  (void) pvParameters;
-  while(1) {
+void SENSOR_S (void *pvParameters) {
+  (void) pvParameters;  //ga penting, dihapus juga boleh
+  mpu.update_sens();
+  l_gforce = mpu.readGforce();
+  while (1) {
+
+  /*GPS READ*/
   while(Serial3.available()>0) {    //kalo ada gps , baca 
     if (gps.encode(Serial3.read()))  //trs di encode pake tiny gps+
       displayInfo();      //proses hasil encodenya
+      Serial3.flush();
     }
-    while(!Serial3.available()) {
+  while(!Serial3.available()) {
       vTaskDelay( 1 / portTICK_PERIOD_MS );  //kalo gada gps, do else tiap 1 mili second
     } 
+  Serial3.flush();
+  /*GPS READ*/
+
+  /*BMP READ*/
+  if (isnan(bmed.read_altitude(ref))) {      //detect bme nyambung atau ga
+  bmed.begin();vTaskDelay( 1 / portTICK_PERIOD_MS );  //kalo ga nyambung coba .begin biar jalan lagi
+  }else {  // kalo nyambung baca datanya
+  temp = bmed.read_temp();
+  press = bmed.read_press();
+  if (tele_calibration==true) {
+    ref = bmed.read_press();
+    bmed.tele_calibration(ref);tele_calibration=false;
   }
+  if (tele_sim==true) {
+ //   if (altit>0) {
+    altit = bmed.read_altitude_sim(sim_press);
+//    }
+ //   else {altit=-0;}
+  }
+  else {
+//    if(bmed.read_altitude(ref)>=0) {  if(bmed.read_altitude(ref)>=600) {digitalWrite(5,HIGH);}
+    altit = bmed.read_altitude(ref);
+ //   } else {altit = 0;}
+  }
+  }
+  /*BMP READ*/
+
+//  error = mpu.error_cek();
+
+/*MPU READ*/
+  mpu.update_sens();
+  if (error!=0||(mpu.readacc_x()&&mpu.readacc_y()&&mpu.readacc_z())==0) { //kalau tidak nyambung nilai error !=0 sama nilai xyz == 0
+    mpu.begin();vTaskDelay( 10 / portTICK_PERIOD_MS ) ;//coba .begin biar jalan lagi
+  }else { //kalau jalan baca data
+  accelX = mpu.readacc_x();
+  accelY = mpu.readacc_y();
+  accelZ = mpu.readacc_z();
+  value_roll = mpu.read_tiltx();
+  value_pitch = mpu.read_tilty();
+  gForce = (mpu.readGforce()+l_gforce)/2;
+  }
+  /*MPU READ*/
+
+  /*DETECTION*/
+  telemetry().detect_mode(tele_sim);
+  telemetry().detect_state(packetCount,gForce,press,altit,last_altit);
+  last_altit = altit;
+  l_gforce = gForce;sensor_counter++;
+  vTaskDelay( 10 / portTICK_PERIOD_MS );  //baca sensor tiap 1 ms biar ga menuhin buffer, tapi nilai di detik 
+  }                                      //1 sj yang dipakai biar up to date (*tanya aja nek bingung maksudnya)
+  /*DETECTION*/
 }
 
 void parsing() {
@@ -182,7 +188,7 @@ void SIMULATOR(void *pvParameters) {
     lock=true;
   }
   if(lock==true) {parsing();}  
-  vTaskDelay(200 / portTICK_PERIOD_MS );
+  vTaskDelay(300 / portTICK_PERIOD_MS );
   }
 }
 
