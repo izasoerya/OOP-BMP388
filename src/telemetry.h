@@ -121,7 +121,7 @@ class telemetry {
     void tele_readcomm(String head, String label, String mode, String content) {
     if (String(head+label+mode+content)=="CMD1084CXON"){ //kalo di string ada kode maka do something
     tele_command = true;;cmdEcho = "CXON";}
-    if (String(head+label+mode+content)=="CMD1084CXCAL"){ //kalo di string ada kode maka do something
+    if (String(head+label+mode+content)=="CMD1084CAL"){ //kalo di string ada kode maka do something
     tele_calibration = true;;cmdEcho = "CAL";
     }
     if (String(head+label+mode+content)=="CMD1084SIMACTIVATE"){ //kalo di string ada kode maka do something

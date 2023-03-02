@@ -35,15 +35,17 @@ void setup() {
   Serial.begin(9600);
   while(!Serial){;}     //make sure program start after serial is open
   Serial3.begin(9600);
-  Serial2.begin(9600);
+  Serial2.begin(115200);
   mpu.begin();   
   bmed.begin();
-  temp = bmp.temperature;
+  temp = bmed.read_temp();
+  /*Dummy Data*/
   while (temp<25) {
     temp = bmed.read_temp();
     press = bmed.read_press();
     altit = bmed.read_altitude(1023.5);
   }
+  /*Dummy Data END*/
   ref = bmp.pressure/100.0;
   pinMode(5, OUTPUT);     //hanya tes program run atau tidak
   xTaskCreate(SENSOR_S, "Task2", 512, NULL, 3, &TaskSENSOR_Handler);    //func bme,mpu
@@ -91,42 +93,34 @@ void SENSOR_S (void *pvParameters) {
   while(Serial3.available()>0) {    //kalo ada gps , baca 
     if (gps.encode(Serial3.read()))  //trs di encode pake tiny gps+
       displayInfo();      //proses hasil encodenya
-      Serial3.flush();
-    }
+      mpu.update_sens();
+  }
   while(!Serial3.available()) {
       vTaskDelay( 1 / portTICK_PERIOD_MS );  //kalo gada gps, do else tiap 1 mili second
-    } 
-  Serial3.flush();
-  /*GPS READ*/
+      mpu.update_sens();
+  } 
+  /*GPS READ END*/
 
   /*BMP READ*/
-  if (isnan(bmed.read_altitude(ref))) {      //detect bme nyambung atau ga
-  bmed.begin();vTaskDelay( 1 / portTICK_PERIOD_MS );  //kalo ga nyambung coba .begin biar jalan lagi
-  }else {  // kalo nyambung baca datanya
+  bmed.bmp_error(ref);
   temp = bmed.read_temp();
   press = bmed.read_press();
   if (tele_calibration==true) {
     ref = bmed.read_press();
-    bmed.tele_calibration(ref);tele_calibration=false;
+    bmed.tele_calibration(ref);
+    tele_calibration=false;
   }
   if (tele_sim==true) {
- //   if (altit>0) {
-    altit = bmed.read_altitude_sim(sim_press);
-//    }
- //   else {altit=-0;}
+    altit = bmed.output_bmp(bmed.read_altitude_sim(sim_press));
   }
   else {
-//    if(bmed.read_altitude(ref)>=0) {  if(bmed.read_altitude(ref)>=600) {digitalWrite(5,HIGH);}
-    altit = bmed.read_altitude(ref);
- //   } else {altit = 0;}
+    altit = bmed.output_bmp(bmed.read_altitude(ref));
   }
-  }
-  /*BMP READ*/
+  /*BMP READ END*/
 
 //  error = mpu.error_cek();
 
 /*MPU READ*/
-  mpu.update_sens();
   if (error!=0||(mpu.readacc_x()&&mpu.readacc_y()&&mpu.readacc_z())==0) { //kalau tidak nyambung nilai error !=0 sama nilai xyz == 0
     mpu.begin();vTaskDelay( 10 / portTICK_PERIOD_MS ) ;//coba .begin biar jalan lagi
   }else { //kalau jalan baca data
@@ -137,7 +131,7 @@ void SENSOR_S (void *pvParameters) {
   value_pitch = mpu.read_tilty();
   gForce = (mpu.readGforce()+l_gforce)/2;
   }
-  /*MPU READ*/
+  /*MPU READ END*/
 
   /*DETECTION*/
   telemetry().detect_mode(tele_sim);
@@ -146,7 +140,7 @@ void SENSOR_S (void *pvParameters) {
   l_gforce = gForce;sensor_counter++;
   vTaskDelay( 10 / portTICK_PERIOD_MS );  //baca sensor tiap 1 ms biar ga menuhin buffer, tapi nilai di detik 
   }                                      //1 sj yang dipakai biar up to date (*tanya aja nek bingung maksudnya)
-  /*DETECTION*/
+  /*DETECTION END*/
 }
 
 void parsing() {
@@ -154,14 +148,14 @@ void parsing() {
   char inChar[n+1];   //buat variabel penampung string
   strcpy(inChar, hasil.c_str());   //convert string to array of char
   for ( i=0;i<n;i++) {    //baca masing-masing karakter
-  if (inChar[i]==','){  //kalo ada tanda (,) hilangkan
-    k++; //menghilangkan (,) sekaligus menuju array berikutnya
-  }
-  else {
-    if(inChar[i] >= 30 && inChar[i] <= 122) {
-      ayaya[k]+=inChar[i];  //kalo gada(,), tulis isinya
+    if (inChar[i]==','){  //kalo ada tanda (,) hilangkan
+      k++; //menghilangkan (,) sekaligus menuju array berikutnya
     }
-  }
+    else {
+      if(inChar[i] >= 30 && inChar[i] <= 122) {
+        ayaya[k]+=inChar[i];  //kalo gada(,), tulis isinya
+      }
+    }
   };
   //Serial.print(ayaya[0]);
   telemetry().tele_readcomm(ayaya[0], ayaya[1], ayaya[2], ayaya[3]);
@@ -215,29 +209,8 @@ void PRINTER_S (void *pvParameters) {  //serial print buat semua sensor dkk (tel
   else {
   Serial.println(tele);
   packetCount++;
-//  Serial.println(gForce);
   }
   vTaskDelay( 1000 / portTICK_PERIOD_MS );
   }
 }
 
-
-
-/* note : 
-1. GPS sekarang masih nge print data kalau blm ngelock biar jml packet nya setara sama lainnya
-   kalau mau ga di print juga bisa ngikut aku
-2. EEPROM masih belum nemu cara biar tiap restart MCU ga overwrite data, tapi harusnya bisa 
-   cek lokasi address ada isinya apa ga, kalau ada jangan write
-3. Kalau mau pake XBEE tinggal ganti serial.print di void print_s jadi Serial nya XBEE
-4. MPU dan BME sudah redundant (reset kalo hilang koneksi, trs nyambung lg kalo tiba2 nyambung)
-   kalau ad sensor disconect juga program tetap jalan 
-5. Bacaan antar serial ada delay 10 ms, masalah ga ini? 
-6. Semua delay (VtaskDelay) cara kerjanya yaitu nge buat fungsi sleep jadi ttp bsia jalanin program lain
-7. To Do list : 
-    - Nyoba ngirim data lewat XBEE dari komputer 1 ke komputer lain yg nyambung arduino
-    - FSW nya parameternya apa aja? perlu diskusi lagi karena kondisi di udara != sekarang
-    - Coba jalanin programnya sampe +- 2 jam buat cek masih jalan apa ga soalnya RTOS punya masalah buffer
-    - Diskusi apakah perlu filter di tiap sensor, nge rata2 pembacaan, kalman dll. 
-      kalo aku sih pake built in cukup
-    - 
-*/

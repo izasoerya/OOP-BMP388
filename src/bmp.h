@@ -43,7 +43,12 @@ class bmp_read {
       return bmp.readAltitude(eeprom_ref);
     };
     float read_altitude_sim(float pc_press) {
-      return bmp.readAltitude(pc_press);
+      if (bmp.readAltitude(pc_press>0)) {
+        return 0.00;
+      }
+      else {
+        return bmp.readAltitude(pc_press);
+      }
     };
     void tele_calibration(float ref) {
       bmp.begin_I2C();  
@@ -59,6 +64,18 @@ class bmp_read {
       }
       Serial.print("Done flush, please comment the function");
     };
+    void bmp_error(float ref) {
+
+;
+    }
+    float output_bmp(float data) {
+      if (data<=0) {
+        return 0.0;
+      }
+      else {
+        return data;
+      }
+    }
 };
 
 #endif

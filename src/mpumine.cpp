@@ -208,6 +208,7 @@ void Mpumine::update_sens() {
 void Mpumine::begin() {
   Wire1.begin();
   mpu.begin();
+  delay(1000);
   mpu.calcOffsets(true,true);
 }
 
