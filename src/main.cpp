@@ -218,4 +218,5 @@ void PRINTER_S (void *pvParameters) {  //serial print buat semua sensor dkk (tel
   }
 }
 
-/*TESTING CLONE YGY*/
+
+/*TESTING CLONE LENOVO*/ 
