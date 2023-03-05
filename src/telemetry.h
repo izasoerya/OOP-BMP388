@@ -121,6 +121,8 @@ class telemetry {
     void tele_readcomm(String head, String label, String mode, String content) {
     if (String(head+label+mode+content)=="CMD1084CXON"){ //kalo di string ada kode maka do something
     tele_command = true;;cmdEcho = "CXON";}
+    if (String(head+label+mode+content)=="CMD1084CXOFF"){ //kalo di string ada kode maka do something
+    tele_command = false;;cmdEcho = "CXOFF";}
     if (String(head+label+mode+content)=="CMD1084CAL"){ //kalo di string ada kode maka do something
     tele_calibration = true;;cmdEcho = "CAL";
     }
@@ -134,7 +136,7 @@ class telemetry {
     tele_enable = false,tele_sim=false,tele_activate=false;;cmdEcho = "SIMDISABLE";
     }
     if (String(head+label+mode)=="CMD1084SIMP"&&tele_enable==true&&tele_activate==true){ //kalo di string ada kode maka do something
-    tele_sim = true;sim_press = content.toFloat();;cmdEcho = content;
+    tele_sim = true;sim_press = content.toFloat()/100.0;;cmdEcho = String(sim_press);
     }
     }
     void distort (float a,float t,float p,float x,float y,float v, int j, int m, int d, float lat, float lng, float gps_alti, int satelite) {

@@ -48,6 +48,7 @@ void setup() {
   /*Dummy Data END*/
   ref = bmp.pressure/100.0;
   pinMode(5, OUTPUT);     //hanya tes program run atau tidak
+  digitalWrite(5, HIGH);
   xTaskCreate(SENSOR_S, "Task2", 512, NULL, 3, &TaskSENSOR_Handler);    //func bme,mpu
   xTaskCreate(PRINTER_S, "Task3", 1024, NULL, 4, &TaskPRINTER_Handler);  //func serial print        
   xTaskCreate(EPROM_SD, "Task5", 512, NULL, 2, &TaskEPROM_Handler);      //func EEPROM
@@ -208,6 +209,9 @@ void PRINTER_S (void *pvParameters) {  //serial print buat semua sensor dkk (tel
   if (tele=="") {;}
   else {
   Serial.println(tele);
+  if (tele_command==true) {
+    Serial2.print(tele);
+  }
   packetCount++;
   }
   vTaskDelay( 1000 / portTICK_PERIOD_MS );
