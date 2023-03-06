@@ -33,7 +33,7 @@ extern unsigned long packetCount; extern bool tele_command, tele_calibration, te
 float accelX,accelY,gForce,l_gforce,accelZ,value_roll,value_pitch,c,temp=0,press,altit,last_altit=0,ref,lat=0,lng=0,eprom,voltase=5.0,gps_altitude=0;    //MPU, BME, GPS, EEPROM
 int packet[3] = {0,0,0},time[7]={0,0,0,0,0,0,0},gps_satelite=0,timer_mil,paket_xbee=0,error; bool var_sim;    //GPS
 int no=0,i,sensor_counter=0; int n ; String ayaya[100]; int k=0,state; String hasil, tele; char tampung; bool lock=false;    //PARSING
-//halo ihza
+//halo ihza halo
 void setup() {
   currentTime = millis();
   Serial.begin(9600);
