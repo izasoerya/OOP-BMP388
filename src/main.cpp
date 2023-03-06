@@ -35,7 +35,6 @@ int packet[3] = {0,0,0},time[7]={0,0,0,0,0,0,0},gps_satelite=0,timer_mil,paket_x
 int no=0,i,sensor_counter=0; int n ; String ayaya[100]; int k=0,state; String hasil, tele; char tampung; bool lock=false;    //PARSING
 //halo ihza halo
 void setup() {
-  currentTime = millis();
   Serial.begin(9600);
   while(!Serial){;}     //make sure program start after serial is open
   Serial3.begin(9600);
@@ -53,6 +52,7 @@ void setup() {
   ref = bmp.pressure/100.0;
   pinMode(5, OUTPUT);     //hanya tes program run atau tidak
   digitalWrite(5, HIGH);
+  Serial.println("ayaya");
   xTaskCreate(SENSOR_S, "Task2", 512, NULL, 4, &TaskSENSOR_Handler);    //func bme,mpu
   xTaskCreate(PRINTER_S, "Task3", 1024, NULL, 5, &TaskPRINTER_Handler);  //func serial print        
   xTaskCreate(EPROM_SD, "Task5", 1024, NULL, 2, &TaskEPROM_Handler);      //func EEPROM
@@ -207,7 +207,7 @@ void GPS (void *pvParameters) {  //serial print buat semua sensor dkk (telemetri
     // while(!Serial3.available()) {
     //   vTaskDelay( 1 / portTICK_PERIOD_MS );
     // }
-  vTaskDelay( 1000 / portTICK_PERIOD_MS );
+  vTaskDelay( 1000000 / portTICK_PERIOD_MS );
   /*GPS READ END*/
   }
 }
@@ -215,13 +215,14 @@ void GPS (void *pvParameters) {  //serial print buat semua sensor dkk (telemetri
 void PRINTER_S (void *pvParameters) {  //serial print buat semua sensor dkk (telemetrinya)
   (void) pvParameters;
   while (1) {
+    currentTime = millis();
     /*GPS READ*/
     while(Serial3.available()>0) {    //kalo ada gps , baca 
-      if (gps.encode(Serial3.read()))  //trs di encode pake tiny gps+
+    if (gps.encode(Serial3.read()))  //trs di encode pake tiny gps+
         displayInfo();      //proses hasil encodenya
         mpu.update_sens();
         }
-    }
+    
     if (currentTime - previousTime >= interval) {
       previousTime = currentTime;
       if (tele=="") {;}
@@ -233,4 +234,6 @@ void PRINTER_S (void *pvParameters) {  //serial print buat semua sensor dkk (tel
       packetCount++;
       }
     }
+    vTaskDelay( 1 / portTICK_PERIOD_MS );
+  }
 }
