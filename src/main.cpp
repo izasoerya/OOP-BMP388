@@ -21,17 +21,21 @@ TaskHandle_t TaskSENSOR_Handler;
 TaskHandle_t TaskPRINTER_Handler;
 TaskHandle_t TaskEPROM_Handler;
 TaskHandle_t TaskSIM_Handler;
+TaskHandle_t TaskGPS_Handler;
 void SENSOR_S(void *pvParameters );
 void PRINTER_S(void *pvParameters );
 void EPROM_SD(void *pvParameters );
 void SIMULATOR(void *pvParameters );
+void GPS(void *pvParameters);
 
+unsigned long previousTime = 0;const long interval = 1000;unsigned long currentTime;
 extern unsigned long packetCount; extern bool tele_command, tele_calibration, tele_enable, tele_sim;extern float sim_press;
-float accelX,accelY,gForce,l_gforce,accelZ,value_roll,value_pitch,c,temp=0,press,altit,last_altit=0,ref,lat,lng,eprom,voltase=5.0,gps_altitude;    //MPU, BME, GPS, EEPROM
-int packet[3] = {0,0,0},time[7],gps_satelite,paket_xbee=0,error; bool var_sim;    //GPS
+float accelX,accelY,gForce,l_gforce,accelZ,value_roll,value_pitch,c,temp=0,press,altit,last_altit=0,ref,lat=0,lng=0,eprom,voltase=5.0,gps_altitude=0;    //MPU, BME, GPS, EEPROM
+int packet[3] = {0,0,0},time[7]={0,0,0,0,0,0,0},gps_satelite=0,timer_mil,paket_xbee=0,error; bool var_sim;    //GPS
 int no=0,i,sensor_counter=0; int n ; String ayaya[100]; int k=0,state; String hasil, tele; char tampung; bool lock=false;    //PARSING
 
 void setup() {
+  unsigned long currentTime = millis();
   Serial.begin(9600);
   while(!Serial){;}     //make sure program start after serial is open
   Serial3.begin(9600);
@@ -49,10 +53,11 @@ void setup() {
   ref = bmp.pressure/100.0;
   pinMode(5, OUTPUT);     //hanya tes program run atau tidak
   digitalWrite(5, HIGH);
-  xTaskCreate(SENSOR_S, "Task2", 512, NULL, 3, &TaskSENSOR_Handler);    //func bme,mpu
-  xTaskCreate(PRINTER_S, "Task3", 1024, NULL, 4, &TaskPRINTER_Handler);  //func serial print        
-  xTaskCreate(EPROM_SD, "Task5", 512, NULL, 2, &TaskEPROM_Handler);      //func EEPROM
+  xTaskCreate(SENSOR_S, "Task2", 512, NULL, 4, &TaskSENSOR_Handler);    //func bme,mpu
+  xTaskCreate(PRINTER_S, "Task3", 1024, NULL, 5, &TaskPRINTER_Handler);  //func serial print        
+  xTaskCreate(EPROM_SD, "Task5", 1024, NULL, 2, &TaskEPROM_Handler);      //func EEPROM
   xTaskCreate(SIMULATOR, "Task6", 512, NULL, 1, &TaskSIM_Handler);      //func EEPROM
+  xTaskCreate(GPS, "Task2", 512, NULL, 4, &TaskGPS_Handler);
   vTaskStartScheduler();
 }
 
@@ -85,23 +90,10 @@ void displayInfo() {
 }
 
 void SENSOR_S (void *pvParameters) {
-  (void) pvParameters;  //ga penting, dihapus juga boleh
+  (void) pvParameters;  
   mpu.update_sens();
   l_gforce = mpu.readGforce();
   while (1) {
-
-  /*GPS READ*/
-  while(Serial3.available()>0) {    //kalo ada gps , baca 
-    if (gps.encode(Serial3.read()))  //trs di encode pake tiny gps+
-      displayInfo();      //proses hasil encodenya
-      mpu.update_sens();
-  }
-  while(!Serial3.available()) {
-      vTaskDelay( 1 / portTICK_PERIOD_MS );  //kalo gada gps, do else tiap 1 mili second
-      mpu.update_sens();
-  } 
-  /*GPS READ END*/
-
   /*BMP READ*/
   bmed.bmp_error(ref);
   temp = bmed.read_temp();
@@ -123,7 +115,7 @@ void SENSOR_S (void *pvParameters) {
 
 /*MPU READ*/
   if (error!=0||(mpu.readacc_x()&&mpu.readacc_y()&&mpu.readacc_z())==0) { //kalau tidak nyambung nilai error !=0 sama nilai xyz == 0
-    mpu.begin();vTaskDelay( 10 / portTICK_PERIOD_MS ) ;//coba .begin biar jalan lagi
+    mpu.begin();//coba .begin biar jalan lagi
   }else { //kalau jalan baca data
   accelX = mpu.readacc_x();
   accelY = mpu.readacc_y();
@@ -196,27 +188,52 @@ void EPROM_SD (void *pvParameters) {   //*buat EEPROM butuh cara untuk avoid ove
   while(1) {
   myFile = SD.open("1088.csv", FILE_WRITE);  //open notepad buat isi data
   if (myFile) {
-    myFile.print(tele);
-    myFile.close();   //close notepad
+  myFile.print(tele);
+  myFile.close();   //close notepad
   }                   //bisa buka file di SD card atau print di serial hasilnya
-  vTaskDelay( 1000/ portTICK_PERIOD_MS );
+  vTaskDelay( 1000 / portTICK_PERIOD_MS );
+  }
+}
+
+void GPS (void *pvParameters) {  //serial print buat semua sensor dkk (telemetrinya)
+  (void) pvParameters;
+  while (1) {
+  /*GPS READ*/
+    // while(Serial3.available()>0) {    //kalo ada gps , baca 
+    //   if (gps.encode(Serial3.read()))  //trs di encode pake tiny gps+
+    //     displayInfo();      //proses hasil encodenya
+    //     mpu.update_sens();
+    // }
+    // while(!Serial3.available()) {
+    //   vTaskDelay( 1 / portTICK_PERIOD_MS );
+    // }
+  vTaskDelay( 1000 / portTICK_PERIOD_MS );
+  /*GPS READ END*/
   }
 }
 
 void PRINTER_S (void *pvParameters) {  //serial print buat semua sensor dkk (telemetrinya)
   (void) pvParameters;
   while (1) {
-  if (tele=="") {;}
-  else {
-  Serial.println(tele);
-  if (tele_command==true) {
-    Serial2.print(tele);
-  }
-  packetCount++;
-  }
-  vTaskDelay( 1000 / portTICK_PERIOD_MS );
+    /*GPS READ*/
+    while(Serial3.available()>0) {    //kalo ada gps , baca 
+      if (gps.encode(Serial3.read()))  //trs di encode pake tiny gps+
+        displayInfo();      //proses hasil encodenya
+        mpu.update_sens();
+        }
+    while(!Serial3.available()) {
+      vTaskDelay( 1 / portTICK_PERIOD_MS );
+    }
+    if (currentTime - previousTime >= interval) {
+      previousTime = currentTime;
+      if (tele=="") {;}
+      else {
+      Serial.println(tele);
+      if (tele_command==true) {
+        Serial2.print(tele);
+      }
+      packetCount++;
+      }
+    }
   }
 }
-
-//tes lainnya bg
-/*TESTING CLONE LENOVO*/ 
