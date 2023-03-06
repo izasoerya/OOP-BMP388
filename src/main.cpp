@@ -35,7 +35,7 @@ int packet[3] = {0,0,0},time[7]={0,0,0,0,0,0,0},gps_satelite=0,timer_mil,paket_x
 int no=0,i,sensor_counter=0; int n ; String ayaya[100]; int k=0,state; String hasil, tele; char tampung; bool lock=false;    //PARSING
 
 void setup() {
-  unsigned long currentTime = millis();
+  currentTime = millis();
   Serial.begin(9600);
   while(!Serial){;}     //make sure program start after serial is open
   Serial3.begin(9600);
@@ -221,8 +221,6 @@ void PRINTER_S (void *pvParameters) {  //serial print buat semua sensor dkk (tel
         displayInfo();      //proses hasil encodenya
         mpu.update_sens();
         }
-    while(!Serial3.available()) {
-      vTaskDelay( 1 / portTICK_PERIOD_MS );
     }
     if (currentTime - previousTime >= interval) {
       previousTime = currentTime;
@@ -235,5 +233,4 @@ void PRINTER_S (void *pvParameters) {  //serial print buat semua sensor dkk (tel
       packetCount++;
       }
     }
-  }
 }
